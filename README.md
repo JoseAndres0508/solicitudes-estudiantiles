@@ -22,7 +22,11 @@ Sistema que permite a un estudiante presentar solicitudes de levantamiento de re
 
 ## 1. Antes de empezar
 
-Dos advertencias que van primero porque ya nos costaron tiempo:
+Tres cosas que conviene saber antes del primer comando. Las dos primeras ya nos costaron horas.
+
+### Laravel no se instala por separado
+
+No busques un instalador de Laravel. El framework es una dependencia del proyecto y llega solo cuando ejecutas `composer install` en el paso 4.2. Lo que sí hay que instalar en la máquina es PHP, Composer, Node.js, MySQL y Git.
 
 ### No trabajes dentro de OneDrive, Dropbox o Google Drive
 
@@ -48,7 +52,7 @@ libssh version => libssh2 is invalid...
 
 Ocurre porque Composer no interpreta correctamente el backend SSL de Windows (Schannel). No es un problema de tu máquina y no se arregla reinstalando PHP.
 
-**Solución:** usar Composer 2.8.12 (ver sección 3.2).
+**Cualquier instalador actual te va a dar una versión afectada**, así que el paso 3.4 de este README es obligatorio, no opcional.
 
 ---
 
@@ -56,53 +60,101 @@ Ocurre porque Composer no interpreta correctamente el backend SSL de Windows (Sc
 
 | Componente | Versión | Verificar con |
 |---|---|---|
+| Git | Cualquiera reciente | `git --version` |
 | PHP | 8.3 o superior | `php -v` |
 | Composer | **2.8.x** (no 2.9 ni 2.10) | `composer -V` |
 | Node.js | 20 o superior | `node -v` |
-| MySQL Server | 8.0 o superior | Servicio `MySQL80` activo |
-| Git | Cualquiera reciente | `git --version` |
+| MySQL Server | 8.0 o superior | Servicio `MySQL80` en ejecución |
 
 Extensiones de PHP necesarias: `pdo_mysql`, `mbstring`, `openssl`, `fileinfo`, `curl`, `zip`. Las instalaciones modernas de PHP para Windows las traen activas por defecto.
+
+Este README asume **Windows** y usa **Git Bash** como terminal. Los comandos que requieren PowerShell están señalados de forma explícita.
 
 ---
 
 ## 3. Instalación desde cero
 
-Si ya tienes PHP, Composer y Node instalados, salta a la sección 3.2 para verificar la versión de Composer, y luego a la 3.3 para MySQL.
+Sigue las secciones en orden. Cada una termina con una verificación: si falla, no avances hasta resolverla.
 
-### 3.1 PHP, Composer y Node
+> **Regla general:** después de instalar cualquier herramienta, **cierra todas las terminales abiertas y abre una nueva**. Las terminales leen el PATH al arrancar y no se enteran de los cambios posteriores. La mayoría de los "no funciona, ya lo instalé" se resuelven así.
 
-La forma más rápida en Windows es **Laravel Herd** ([herd.laravel.com](https://herd.laravel.com/windows)), que instala PHP y Composer ya configurados y añadidos al PATH.
+### 3.1 Git
 
-Node.js se instala aparte desde [nodejs.org](https://nodejs.org/) (versión LTS).
+Va primero porque sin él no puedes clonar el repositorio, y porque instala **Git Bash**, la terminal que usan todos los comandos de este documento.
 
-Verifica en Git Bash:
+Descarga desde [git-scm.com/download/win](https://git-scm.com/download/win). El instalador ofrece muchas pantallas; **acepta los valores por defecto en todas**. Los únicos que importan ya vienen bien configurados.
+
+Verifica abriendo **Git Bash** desde el menú Inicio:
+
+```bash
+git --version
+```
+
+Debe responder algo como `git version 2.47.0`.
+
+Configura tu identidad, que es lo que aparecerá en cada commit:
+
+```bash
+git config --global user.name "Tu Nombre"
+git config --global user.email "tu@correo.com"
+git config --global init.defaultBranch main
+```
+
+Usa el correo asociado a tu cuenta de GitHub para que los commits se vinculen a tu perfil.
+
+### 3.2 PHP y Composer
+
+La forma más rápida en Windows es **Laravel Herd**, que instala ambos y los agrega al PATH automáticamente.
+
+Descarga desde [herd.laravel.com/windows](https://herd.laravel.com/windows), instala y **reinicia Git Bash**.
+
+Verifica:
 
 ```bash
 php -v
 composer -V
-node -v
 ```
 
-Los tres deben responder con un número de versión.
+`php -v` debe reportar 8.3 o superior. `composer -V` debe reportar un número de versión y la ruta al PHP que está usando.
 
-### 3.2 Ajustar la versión de Composer
+<details>
+<summary>Alternativa sin Herd</summary>
 
-Comprueba la versión:
+Descarga PHP desde [windows.php.net/download](https://windows.php.net/download/) (versión Thread Safe, x64), descomprime en `C:\php`, copia `php.ini-development` a `php.ini` y descomenta las extensiones necesarias quitando el `;` inicial. Luego agrega `C:\php` al PATH de Windows.
+
+Composer se instala aparte desde [getcomposer.org/download](https://getcomposer.org/download/).
+
+Este camino es más laborioso y propenso a errores de configuración. Herd es preferible salvo que tengas una razón concreta.
+
+</details>
+
+### 3.3 Verificar las extensiones de PHP
+
+```bash
+php -m | grep -E "pdo_mysql|mbstring|openssl|fileinfo|curl|zip"
+```
+
+Deben aparecer las seis. Si falta alguna con Herd instalado, avisa al equipo antes de continuar: sin `pdo_mysql` el proyecto no conecta a la base de datos.
+
+### 3.4 Ajustar la versión de Composer
+
+**Este paso es obligatorio.** Cualquier instalación reciente trae una versión con el bug descrito en la sección 1.
+
+Comprueba:
 
 ```bash
 composer -V
 ```
 
-Si dice **2.9.x** o **2.10.x**, hay que bajarla. Abre **PowerShell como administrador** (clic derecho en el menú Inicio → Terminal (Administrador)) y ejecuta:
+Si dice **2.9.x** o **2.10.x**, abre **PowerShell como administrador** (clic derecho en el menú Inicio → Terminal (Administrador)) y ejecuta:
 
 ```powershell
 composer self-update 2.8.12
 ```
 
-Se requiere administrador porque Composer suele instalarse en `C:\ProgramData`.
+Se requiere administrador porque Composer suele instalarse en una carpeta protegida del sistema. Si lo ejecutas sin privilegios, Composer detecta la situación y ofrece elevarse: responde `Y`.
 
-Verifica:
+Verifica de nuevo:
 
 ```bash
 composer -V
@@ -110,11 +162,26 @@ composer -V
 
 Debe decir `Composer version 2.8.12`.
 
-> Si en el futuro quieres volver a la versión anterior: `composer self-update --rollback`
+> Para volver a la versión anterior en el futuro: `composer self-update --rollback`
 
-### 3.3 MySQL Server
+### 3.5 Node.js
 
-Descarga el instalador desde [dev.mysql.com/downloads/installer](https://dev.mysql.com/downloads/installer/). Elige el archivo **completo** (~300 MB), no el de descarga en línea. En la página de descarga hay un enlace pequeño que dice *"No thanks, just start my download"* — no necesitas cuenta.
+Descarga la versión **LTS** desde [nodejs.org](https://nodejs.org/). Acepta los valores por defecto del instalador.
+
+Reinicia Git Bash y verifica:
+
+```bash
+node -v
+npm -v
+```
+
+`node -v` debe reportar 20 o superior.
+
+### 3.6 MySQL Server
+
+Descarga el instalador desde [dev.mysql.com/downloads/installer](https://dev.mysql.com/downloads/installer/). Elige el archivo **completo** (~300 MB), no el de descarga en línea, que falla si la conexión se interrumpe.
+
+En la página de descarga aparece "Login / Sign Up"; abajo hay un enlace pequeño que dice *"No thanks, just start my download"*. No necesitas cuenta.
 
 Durante la instalación:
 
@@ -123,15 +190,17 @@ Durante la instalación:
 | Choosing a Setup Type | **Custom** |
 | Select Products | Solo **MySQL Server** y **MySQL Workbench** |
 | Type and Networking | Development Computer, puerto **3306** |
-| Authentication Method | **Strong Password Encryption** |
+| Authentication Method | **Strong Password Encryption** (la primera) |
 | Accounts and Roles | Define la contraseña de root — **anótala** |
 | Windows Service | Nombre `MySQL80`, marcar "Start at System Startup" |
 
-No instales el paquete completo: MySQL Shell, Router y los conectores para .NET o Python no se usan en este proyecto.
+No instales el paquete completo: MySQL Shell, Router y los conectores para .NET o Python no se usan en este proyecto y solo ocupan espacio.
 
-**Anota la contraseña de root.** La vas a necesitar en el archivo `.env` y no hay forma cómoda de recuperarla.
+**Anota la contraseña de root en un lugar seguro.** La vas a necesitar en el archivo `.env` y no hay forma cómoda de recuperarla.
 
-### 3.4 Verificar que el servidor esté corriendo
+> Si ya tenías MySQL Workbench instalado de antes, **eso no incluye el servidor**. Workbench es solo el cliente gráfico. Abre el instalador, elige **Add** y agrega únicamente `MySQL Server`. No uses las opciones Remove ni Upgrade sobre una instalación existente.
+
+### 3.7 Verificar que el servidor esté corriendo
 
 En **PowerShell**:
 
@@ -145,20 +214,25 @@ Debe aparecer `MySQL80` con estado `Running`. Si dice `Stopped`:
 Start-Service MySQL80
 ```
 
-### 3.5 Crear la base de datos
+Si no aparece ningún servicio, el servidor no se instaló correctamente. Vuelve al paso 3.6.
 
-Abre **MySQL Workbench** y crea una conexión nueva con el botón `+`:
+### 3.8 Crear la base de datos
+
+Abre **MySQL Workbench** y crea una conexión nueva con el botón `+` junto a "MySQL Connections":
 
 | Campo | Valor |
 |---|---|
 | Connection Name | `Local MySQL 8.0` |
+| Connection Method | Standard (TCP/IP) |
 | Hostname | `127.0.0.1` |
 | Port | `3306` |
 | Username | `root` |
 
-> Si ves una conexión llamada "Docker MySQL" u otra preexistente, **no la uses**. Apunta a un servidor distinto, normalmente en otro puerto, y la base que crees ahí no será la que Laravel encuentre.
+Pulsa **Test Connection** antes de guardar. Debe responder que la conexión fue exitosa.
 
-Conéctate y ejecuta:
+> Si ves una conexión preexistente llamada "Docker MySQL" u otra similar, **no la uses**. Apunta a un servidor distinto, normalmente en otro puerto. Si creas la base ahí, Laravel no la encontrará y el error resultante es difícil de rastrear.
+
+Conéctate y ejecuta en la ventana de consulta:
 
 ```sql
 CREATE DATABASE student_requests
@@ -168,7 +242,38 @@ CREATE DATABASE student_requests
 
 La codificación `utf8mb4` es obligatoria: el sistema guarda nombres de cursos e instituciones con tildes y eñes. Corregirla después implica migrar la base completa.
 
-Verifica con `SHOW DATABASES;` que aparezca `student_requests`.
+Verifica:
+
+```sql
+SHOW DATABASES;
+```
+
+`student_requests` debe aparecer en la lista.
+
+### 3.9 Editor de código
+
+No es un requisito técnico, pero facilita bastante el trabajo. **Visual Studio Code** desde [code.visualstudio.com](https://code.visualstudio.com/).
+
+Extensiones útiles para este proyecto: PHP Intelephense, Laravel Blade Snippets, Tailwind CSS IntelliSense.
+
+### 3.10 Verificación final
+
+Antes de clonar el repositorio, los cinco comandos deben responder correctamente en **una terminal recién abierta**:
+
+```bash
+git --version      # cualquier versión reciente
+php -v             # 8.3 o superior
+composer -V        # 2.8.x
+node -v            # 20 o superior
+```
+
+Y en **PowerShell**:
+
+```powershell
+Get-Service MySQL80    # Status: Running
+```
+
+Si los cinco pasan, continúa. Si alguno falla, resuélvelo antes: los errores de la sección 4 casi siempre vienen de un requisito mal instalado aquí.
 
 ---
 
@@ -182,13 +287,18 @@ git clone https://github.com/JoseAndres0508/solicitudes-estudiantiles.git
 cd solicitudes-estudiantiles
 ```
 
+Si el repositorio es privado, Git pedirá autenticación. GitHub **no acepta tu contraseña de la cuenta** desde 2021:
+
+- Si se abre una ventana del navegador pidiendo autorizar, acepta y listo.
+- Si pide usuario y contraseña en la terminal, en "Password" va un **Personal Access Token**, que se genera en GitHub bajo `Settings → Developer settings → Personal access tokens → Tokens (classic)`, con el permiso `repo` marcado. Cópialo apenas se genere: GitHub no lo muestra de nuevo.
+
 ### 4.2 Instalar dependencias de PHP
 
 ```bash
 composer install
 ```
 
-Descarga la carpeta `vendor/`, que no viaja en el repositorio. Tarda entre uno y tres minutos.
+Aquí es donde llega Laravel y todo lo demás, a la carpeta `vendor/`, que no viaja en el repositorio porque contiene decenas de miles de archivos. Tarda entre uno y tres minutos.
 
 ### 4.3 Instalar dependencias de JavaScript
 
@@ -203,7 +313,7 @@ cp .env.example .env
 php artisan key:generate
 ```
 
-El archivo `.env` guarda credenciales y **nunca se sube al repositorio**. Ábrelo y ajusta el bloque de base de datos con tu contraseña de root:
+El archivo `.env` guarda credenciales y **nunca se sube al repositorio**. Ábrelo en el editor y ajusta el bloque de base de datos con tu contraseña de root:
 
 ```env
 DB_CONNECTION=mysql
@@ -248,7 +358,7 @@ Abre <http://127.0.0.1:8000> en el navegador.
 
 Para detener cualquiera de los dos: `Ctrl + C`.
 
-### 4.7 Verificar que todo funcione
+### 4.7 Verificar
 
 ```bash
 php artisan migrate:status
@@ -421,6 +531,10 @@ solicitudes-estudiantiles/
 
 ## 8. Solución de problemas
 
+### `command not found` después de instalar algo
+
+La terminal leyó el PATH al abrirse y no vio la instalación posterior. **Cierra todas las terminales y abre una nueva.** Si persiste tras reiniciar la máquina, la herramienta no se agregó al PATH durante la instalación.
+
 ### `Failed to open stream: vendor/autoload.php`
 
 Falta la carpeta `vendor/`. No viaja en el repositorio porque contiene decenas de miles de archivos.
@@ -443,7 +557,7 @@ La contraseña de `DB_PASSWORD` en `.env` no coincide con la de MySQL. Revísala
 
 ### `SQLSTATE[HY000] [1049] Unknown database 'student_requests'`
 
-La base no existe todavía. Créala desde Workbench con el `CREATE DATABASE` de la sección 3.5.
+La base no existe todavía. Créala desde Workbench con el `CREATE DATABASE` de la sección 3.8. Verifica también que estés conectado a la conexión correcta y no a una de Docker.
 
 ### `SQLSTATE[HY000] [2002] Connection refused`
 
@@ -452,6 +566,10 @@ El servicio de MySQL no está corriendo. En PowerShell:
 ```powershell
 Start-Service MySQL80
 ```
+
+### `could not find driver`
+
+Falta la extensión `pdo_mysql` en PHP. Verifica con `php -m | grep pdo_mysql`. Si no aparece, la instalación de PHP está incompleta.
 
 ### `mysql: command not found`
 
@@ -494,7 +612,7 @@ php artisan migrate
 php artisan optimize:clear
 ```
 
-Si persiste, compara las versiones:
+Si persiste, comparen las versiones de las herramientas:
 
 ```bash
 php -v
@@ -504,7 +622,7 @@ node -v
 
 ---
 
-## Contacto y documentación adicional
+## Documentación adicional
 
 - **Ficha del proyecto:** requerimientos ES-01 a ES-04 y rúbricas de evaluación
 - **Diario de decisiones técnicas e IA:** registro de decisiones, obligatorio mantenerlo actualizado
