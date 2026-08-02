@@ -235,12 +235,14 @@ Pulsa **Test Connection** antes de guardar. Debe responder que la conexión fue 
 Conéctate y ejecuta en la ventana de consulta:
 
 ```sql
-CREATE DATABASE student_requests
+CREATE DATABASE gestion_academica_utn
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
 ```
 
-La codificación `utf8mb4` es obligatoria: el sistema guarda nombres de cursos e instituciones con tildes y eñes. Corregirla después implica migrar la base completa.
+El nombre no es arbitrario: es el que define el estándar institucional de base de datos del curso, común a los cinco módulos. Si más adelante los módulos se consolidan, la base ya se llama como corresponde.
+
+La codificación `utf8mb4` es obligatoria: el esquema guarda nombres de cursos, instituciones y valores `ENUM` con tildes (`'Convalidación'`, `'Pendiente de revisión'`). Corregirla después implica migrar la base completa.
 
 Verifica:
 
@@ -248,7 +250,7 @@ Verifica:
 SHOW DATABASES;
 ```
 
-`student_requests` debe aparecer en la lista.
+`gestion_academica_utn` debe aparecer en la lista.
 
 ### 3.9 Editor de código
 
@@ -313,13 +315,13 @@ cp .env.example .env
 php artisan key:generate
 ```
 
-El archivo `.env` guarda credenciales y **nunca se sube al repositorio**. Ábrelo en el editor y ajusta el bloque de base de datos con tu contraseña de root:
+El archivo `.env` guarda credenciales y **nunca se sube al repositorio**. Ábrelo en el editor y ajusta el bloque de base de datos con **tu propia** contraseña de root:
 
 ```env
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_DATABASE=student_requests
+DB_DATABASE=gestion_academica_utn
 DB_USERNAME=root
 DB_PASSWORD=tu_contraseña
 ```
@@ -330,13 +332,40 @@ Si tu contraseña contiene `#`, `$` o espacios, enciérrala en comillas dobles:
 DB_PASSWORD="mi#clave"
 ```
 
+Confirma también el bloque de idioma, que debe quedar así:
+
+```env
+APP_LOCALE=es
+APP_FALLBACK_LOCALE=en
+APP_FAKER_LOCALE=es_ES
+```
+
+El *fallback* queda en inglés a propósito: si falta una traducción, se muestra el texto en inglés en lugar de la clave cruda. Faker no tiene locale `es_CR`; `es_ES` es el más completo de los disponibles en español.
+
+> **Zona horaria.** No se configura en `.env`. Está fijada en `config/app.php` como `'timezone' => 'America/Costa_Rica'`, porque no cambia entre entornos: es un dato del dominio, no de la máquina. Importa más de lo que parece — el requerimiento ES-03 mide 24 horas y 5 días hábiles, y con UTC el vencimiento cae el día equivocado.
+
 ### 4.5 Crear las tablas y cargar datos de prueba
 
 ```bash
 php artisan migrate --seed
 ```
 
-Esto crea el esquema completo y lo llena con datos de demostración: carreras, cursos, requisitos, estudiantes con expediente académico simulado, reglas de levantamiento y precedentes de convalidación.
+Crea las 24 migraciones y carga los datos de demostración: el RBAC completo, las 14 carreras, dos planes de estudio con su malla y requisitos, cuatro estudiantes con expediente académico simulado, las reglas de levantamiento, el catálogo de precedentes y solicitudes de ambos tipos.
+
+**Los datos no son de relleno.** Cada estudiante recorre un camino distinto del motor de reglas, para que cada criterio de aceptación sea demostrable:
+
+| Cuenta | Contraseña | Situación | Qué demuestra |
+|---|---|---|---|
+| `ana@utn.ac.cr` | `password` | ITI-302 con nota 92 | La regla de nota mínima se cumple → procede |
+| `bruno@utn.ac.cr` | `password` | ITI-302 con 71, 15 créditos | Ninguna regla concluye → no procede |
+| `carla@utn.ac.cr` | `password` | Matriculada en un plan Terminal | Procede por la regla de plan terminal |
+| `diego@utn.ac.cr` | `password` | Ya tiene el requisito levantado | Caso de solicitud duplicada |
+| `docencia@utn.ac.cr` | `password` | Revisora | Bandeja centralizada (ES-04) |
+| `comision@utn.ac.cr` | `password` | Comisión Técnica | Resolución de convalidaciones (ES-02) |
+
+El curso `ITI-501` quedó **deliberadamente sin reglas configuradas**: es el caso que debe elevarse solo a revisión manual.
+
+> Las reglas de levantamiento son **filas de la tabla `reglas_levantamiento`**, no código. El seeder solo precarga algunas para que la demostración tenga contenido; si lo borras, el sistema funciona igual y toda solicitud se eleva a revisión manual.
 
 ### 4.6 Levantar la aplicación
 
@@ -364,7 +393,21 @@ Para detener cualquiera de los dos: `Ctrl + C`.
 php artisan migrate:status
 ```
 
-Todas las migraciones deben aparecer como `Ran`.
+Las 24 migraciones deben aparecer como `Ran`.
+
+Comprueba además que los datos entraron:
+
+```bash
+php artisan tinker --execute="
+  echo 'carreras: '.App\Models\Carrera::count().PHP_EOL;
+  echo 'cursos: '.App\Models\Curso::count().PHP_EOL;
+  echo 'estudiantes: '.App\Models\Estudiante::count().PHP_EOL;
+  echo 'reglas: '.App\Models\ReglaLevantamiento::count().PHP_EOL;
+  echo 'solicitudes: '.App\Models\Solicitud::count().PHP_EOL;
+"
+```
+
+Debe reportar 14 carreras, 10 cursos, 4 estudiantes, 6 reglas y 6 solicitudes. Si algún conteo da 0, el seeder correspondiente falló: revisa la salida de `php artisan db:seed`.
 
 ---
 
@@ -455,8 +498,8 @@ git pull
 git checkout -b feat/rules-engine-base
 
 # 3. Trabajar y commitear en pasos pequeños
-git add app/Models/WaiverRule.php
-git commit -m "feat(rules-engine): add waiver rule model with relationships"
+git add app/Models/ReglaLevantamiento.php
+git commit -m "feat(rules-engine): add waiver rule evaluator for minimum grade"
 
 # 4. Subir la rama
 git push -u origin feat/rules-engine-base
@@ -496,13 +539,14 @@ Debe responder con la línea del `.gitignore` que lo excluye. Si no responde nad
 ```
 solicitudes-estudiantiles/
 ├── app/
-│   ├── Models/              Modelos Eloquent (13 entidades)
+│   ├── Models/              Modelos Eloquent (18 entidades)
 │   ├── Http/                Controladores y middleware
 │   └── Livewire/            Componentes Livewire
 ├── database/
-│   ├── migrations/          Esquema de la base de datos
+│   ├── migrations/          Esquema de la base de datos (24 archivos)
 │   ├── factories/           Generadores de datos de prueba
 │   └── seeders/             Carga de datos iniciales
+├── docs/                    Diario de decisiones técnicas e IA
 ├── resources/
 │   ├── views/               Plantillas Blade
 │   ├── css/                 Tailwind
@@ -517,15 +561,24 @@ solicitudes-estudiantiles/
 
 ### Modelo de datos
 
+El esquema **no lo diseñó el equipo**: se transcribe del estándar institucional del curso, común a los cinco módulos. De sus 45 tablas se implementan las que el módulo necesita para funcionar.
+
 | Grupo | Tablas |
 |---|---|
-| Catálogo académico | `careers`, `courses`, `course_prerequisites` |
-| Expediente | `students`, `academic_records` |
-| Configuración | `waiver_rules`, `validation_precedents` |
-| Solicitudes | `student_requests`, `waiver_requests`, `validation_requests` |
-| Soporte | `attachments`, `status_changes`, `granted_waivers` |
+| Autenticación y RBAC | `users`, `passkeys`, `roles`, `permissions`, `role_user`, `permission_role`, `permission_user` |
+| Catálogo académico | `carreras`, `cursos`, `periodos_academicos` |
+| Repositorio curricular | `planes_estudio`, `niveles`, `curso_nivel`, `requisitos`, `equiparaciones` |
+| Estudiantes | `estudiantes`, `estudiante_plan`, `historial_academico` |
+| **Solicitudes (módulo propio)** | `reglas_levantamiento`, `convalidaciones_historicas`, `solicitudes`, `solicitud_estados_historial` |
+| Documentos | `archivos` |
 
-> El modelo se llama `StudentRequest` y no `Request` porque este último colisiona con `Illuminate\Http\Request`, la clase que Laravel inyecta en los controladores.
+Tres decisiones del esquema que conviene entender antes de tocar código:
+
+- **Los créditos viven en `curso_nivel`, no en `cursos`.** Un mismo curso puede valer 3 créditos en un plan y 4 en otro. La regla de "créditos acumulados ≥ K" se calcula uniendo `historial_academico` con `curso_nivel`, filtrando por el plan del estudiante.
+- **`solicitudes` es una sola tabla para ambos tipos.** Las columnas propias de cada tipo quedan nulables. Se prefirió eso a dividirla en subtablas porque la bandeja de ES-04 es la pantalla más usada y lista los dos tipos juntos: con una tabla es un índice, con dos sería un `UNION` en cada carga.
+- **No existe una tabla de levantamientos otorgados.** Un levantamiento concedido ya queda como `solicitudes` en estado `Aprobada` y como fila de `historial_academico` con estado `Requisito levantado`. La detección de duplicados es una consulta previa en la capa de aplicación.
+
+> **Nombres de tabla en los modelos.** El pluralizador de Laravel usa reglas del inglés y falla con nombres en español: `Nivel` resolvería `nivels`, `Solicitud` resolvería `solicituds`. Diez de los 18 modelos declaran su tabla con el atributo `#[Table('...')]`. Si creas un modelo nuevo, verifica el nombre que resuelve antes de asumir que funciona.
 
 ---
 
@@ -555,9 +608,30 @@ composer self-update 2.8.12
 
 La contraseña de `DB_PASSWORD` en `.env` no coincide con la de MySQL. Revísala y, si tiene caracteres especiales, ponla entre comillas dobles.
 
-### `SQLSTATE[HY000] [1049] Unknown database 'student_requests'`
+### `SQLSTATE[HY000] [1049] Unknown database 'gestion_academica_utn'`
 
 La base no existe todavía. Créala desde Workbench con el `CREATE DATABASE` de la sección 3.8. Verifica también que estés conectado a la conexión correcta y no a una de Docker.
+
+### Las tildes se ven como `Ã³` o los `ENUM` rechazan valores
+
+La base se creó sin `utf8mb4`. Varios `ENUM` del esquema llevan tildes (`'Convalidación'`, `'Pendiente de revisión'`) y fallan con otra codificación. Verifica:
+
+```sql
+SELECT default_character_set_name, default_collation_name
+FROM information_schema.SCHEMATA
+WHERE schema_name = 'gestion_academica_utn';
+```
+
+Debe decir `utf8mb4` y `utf8mb4_unicode_ci`. Si no, borra la base y vuelve a crearla con el `CREATE DATABASE` completo de la sección 3.8.
+
+### Las fechas u horas no cuadran
+
+Revisa que `config/app.php` tenga `'timezone' => 'America/Costa_Rica'`. Si estaba en `UTC`, corrígelo y reconstruye para que las marcas de tiempo sembradas queden consistentes:
+
+```bash
+php artisan optimize:clear
+php artisan migrate:fresh --seed
+```
 
 ### `SQLSTATE[HY000] [2002] Connection refused`
 
@@ -624,7 +698,7 @@ node -v
 
 ## Documentación adicional
 
-- **Ficha del proyecto:** requerimientos ES-01 a ES-04 y rúbricas de evaluación
-- **Diario de decisiones técnicas e IA:** registro de decisiones, obligatorio mantenerlo actualizado
-- **Requisitos documentales:** criterios de admisibilidad de las solicitudes
-- **Plan de trabajo:** distribución de tareas y estimaciones
+- **[`docs/Diario_Decisiones_IA.docx`](docs/Diario_Decisiones_IA.docx)** — Diario de decisiones técnicas e IA. Vale el 10% de la nota y se califica por consistencia con el historial de commits, así que **se escribe cuando se toma la decisión, no al final**. Si tomas una decisión de diseño, agrégale una entrada en el mismo commit.
+- **Ficha del proyecto** — requerimientos ES-01 a ES-04 y rúbricas de evaluación.
+- **Estándar institucional de base de datos** (`sistema_gestion_academica_utn.sql`) — las 45 tablas comunes a los cinco módulos. Es la fuente del esquema: **no lo modifiques por cuenta propia**, consúltalo con el docente.
+- **Plan de trabajo** — distribución de tareas y estimaciones.
