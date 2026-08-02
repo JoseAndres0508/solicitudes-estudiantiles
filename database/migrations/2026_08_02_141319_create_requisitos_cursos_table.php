@@ -13,7 +13,12 @@ return new class extends Migration
     {
         Schema::create('requisitos_cursos', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('curso_id')->constrained('cursos')->cascadeOnDelete()->cascadeOnUpdate();
+            $table->foreignId('requisito_id')->constrained('cursos')->restrictOnDelete()->cascadeOnUpdate();
             $table->timestamps();
+
+            $table->unique(['curso_id', 'requisito_id']);
+            $table->index('requisito_id');
         });
     }
 

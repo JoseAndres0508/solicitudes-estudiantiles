@@ -13,8 +13,16 @@ return new class extends Migration
     {
         Schema::create('periodos_academicos', function (Blueprint $table) {
             $table->id();
+            $table->unsignedSmallInteger('anio');
+            $table->unsignedTinyInteger('cuatrimestre')->comment('1, 2 o 3');
+            $table->date('fecha_inicio');
+            $table->date('fecha_fin');
             $table->timestamps();
-        });
+
+            $table->unique(['anio', 'cuatrimestre']);
+});
+
+DB::statement('ALTER TABLE periodos_academicos ADD CONSTRAINT chk_periodos_cuatrimestre CHECK (cuatrimestre BETWEEN 1 AND 3)');
     }
 
     /**

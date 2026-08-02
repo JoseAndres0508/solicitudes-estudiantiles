@@ -13,8 +13,10 @@ return new class extends Migration
     {
         Schema::create('carreras', function (Blueprint $table) {
             $table->id();
+            $table->string('nombre', 150)->unique();
+            $table->boolean('activa')->default(true);
             $table->timestamps();
-        });
+});
     }
 
     /**

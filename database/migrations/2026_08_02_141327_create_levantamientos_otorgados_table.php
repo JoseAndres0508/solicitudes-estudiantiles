@@ -13,7 +13,14 @@ return new class extends Migration
     {
         Schema::create('levantamientos_otorgados', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('estudiante_id')->constrained('estudiantes')->cascadeOnDelete()->cascadeOnUpdate();
+            $table->foreignId('curso_id')->constrained('cursos')->restrictOnDelete()->cascadeOnUpdate();
+            $table->foreignId('requisito_id')->constrained('cursos')->restrictOnDelete()->cascadeOnUpdate();
+            $table->foreignId('solicitud_id')->nullable()->constrained('solicitudes')->nullOnDelete()->cascadeOnUpdate();
+            $table->date('fecha_otorgamiento');
             $table->timestamps();
+
+            $table->unique(['estudiante_id', 'curso_id', 'requisito_id'], 'levantamientos_unico');
         });
     }
 

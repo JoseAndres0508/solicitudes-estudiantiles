@@ -13,7 +13,14 @@ return new class extends Migration
     {
         Schema::create('cambios_estado', function (Blueprint $table) {
             $table->id();
-            $table->timestamps();
+            $table->foreignId('solicitud_id')->constrained('solicitudes')->cascadeOnDelete()->cascadeOnUpdate();
+            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete()->cascadeOnUpdate();
+            $table->enum('estado_anterior', ['Pendiente', 'En revisión', 'Aprobada', 'Denegada'])->nullable();
+            $table->enum('estado_nuevo', ['Pendiente', 'En revisión', 'Aprobada', 'Denegada']);
+            $table->text('comentario')->nullable();
+            $table->timestamp('created_at')->useCurrent();
+
+            $table->index(['solicitud_id', 'created_at']);
         });
     }
 
