@@ -10,21 +10,21 @@ class DatabaseSeeder extends Seeder
     use WithoutModelEvents;
 
     /**
-     * El orden respeta las dependencias: catálogos institucionales primero,
-     * luego la malla curricular, el expediente simulado y por último las
-     * solicitudes que lo consumen.
+     * The order follows the dependency chain: institutional catalogues first,
+     * then the curriculum, the simulated records, and finally the requests
+     * that consume them.
      */
     public function run(): void
     {
         $this->call([
-            RolPermisoSeeder::class,
-            CarreraSeeder::class,
-            PeriodoAcademicoSeeder::class,
-            PlanEstudioSeeder::class,
-            ReglaLevantamientoSeeder::class,
-            ConvalidacionHistoricaSeeder::class,
-            EstudianteSeeder::class,
-            SolicitudSeeder::class,
+            RolePermissionSeeder::class,
+            DegreeProgramSeeder::class,
+            AcademicTermSeeder::class,
+            StudyPlanSeeder::class,
+            WaiverRuleSeeder::class,
+            TransferCreditPrecedentSeeder::class,
+            StudentSeeder::class,
+            StudentRequestSeeder::class,
         ]);
     }
 }

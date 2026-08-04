@@ -34,38 +34,37 @@ class User extends Authenticatable
         ];
     }
 
-    /** @return BelongsToMany<Rol, $this> */
+    /** @return BelongsToMany<Role, $this> */
     public function roles(): BelongsToMany
     {
-        return $this->belongsToMany(Rol::class, 'role_user', 'user_id', 'role_id')
-            ->withPivot('created_at');
+        return $this->belongsToMany(Role::class, 'role_user')->withPivot('created_at');
     }
 
-    /** Permisos concedidos directamente, al margen de los roles. */
-    /** @return BelongsToMany<Permiso, $this> */
-    public function permisosDirectos(): BelongsToMany
+    /** Permissions granted directly to the user, outside of any role. */
+    /** @return BelongsToMany<Permission, $this> */
+    public function directPermissions(): BelongsToMany
     {
-        return $this->belongsToMany(Permiso::class, 'permission_user', 'user_id', 'permission_id')
-            ->withPivot(['otorgado_por', 'created_at']);
+        return $this->belongsToMany(Permission::class, 'permission_user')
+            ->withPivot(['granted_by', 'created_at']);
     }
 
-    /** @return HasOne<Estudiante, $this> */
-    public function estudiante(): HasOne
+    /** @return HasOne<Student, $this> */
+    public function student(): HasOne
     {
-        return $this->hasOne(Estudiante::class);
+        return $this->hasOne(Student::class);
     }
 
-    /** Solicitudes en las que este usuario figura como revisor. */
-    /** @return HasMany<Solicitud, $this> */
-    public function solicitudesRevisadas(): HasMany
+    /** Requests where this user is recorded as the reviewer. */
+    /** @return HasMany<StudentRequest, $this> */
+    public function reviewedRequests(): HasMany
     {
-        return $this->hasMany(Solicitud::class, 'revisor_id');
+        return $this->hasMany(StudentRequest::class, 'reviewer_id');
     }
 
-    /** @return HasMany<Archivo, $this> */
-    public function archivos(): HasMany
+    /** @return HasMany<Attachment, $this> */
+    public function attachments(): HasMany
     {
-        return $this->hasMany(Archivo::class);
+        return $this->hasMany(Attachment::class);
     }
 
     /** @return HasMany<Passkey, $this> */
@@ -74,10 +73,10 @@ class User extends Authenticatable
         return $this->hasMany(Passkey::class);
     }
 
-    /** Indica si el usuario tiene el permiso, por rol o de forma directa. */
-    public function tienePermiso(string $permiso): bool
+    /** Whether the user holds the permission, through a role or directly. */
+    public function hasPermission(string $permission): bool
     {
-        return $this->permisosDirectos()->where('name', $permiso)->exists()
-            || $this->roles()->whereHas('permisos', fn ($q) => $q->where('name', $permiso))->exists();
+        return $this->directPermissions()->where('name', $permission)->exists()
+            || $this->roles()->whereHas('permissions', fn ($q) => $q->where('name', $permission))->exists();
     }
 }
